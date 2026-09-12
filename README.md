@@ -21,38 +21,104 @@ Users can browse active, upcoming, and past giveaways. Each giveaway offers prem
 3. **Ended:** The entry period has closed. The backend finalizes winners, and the UI shifts to winner reveals.
 4. **Archived:** Historical giveaways whose winners have been successfully processed and moved to the "Previous Winners" history.
 
-## 🔀 System Workflow & Application Flow Diagram
+## 🔀 Technical Architecture, Validation & Workflow Diagram
 
-Below is the complete end-to-end application workflow diagram illustrating participant interactions and admin/system finalization:
+Below is the complete end-to-end technical architecture, security validation pipeline, transaction processing engine, and database persistence flow for the VELOOP Rewards platform:
 
 ```mermaid
 flowchart TD
-    subgraph ParticipantFlow["Participant Flow"]
-        A["User Opens Website"] --> B["Register / Login"]
-        B --> C["JWT Authentication"]
-        C --> D["Browse Current Giveaways"]
-        D --> E["Open Giveaway Details"]
-        E --> F["Click Confirm & Join"]
-        F --> G["Send Request with Idempotency-Key"]
-        G --> H["Backend Validates & Checks VE Balance"]
-        H --> I["Atomic Entry Fee Deduction (ACID Session)"]
-        I --> J["Participation Saved in MongoDB"]
-        J --> K["User Checks Profile / My Giveaways"]
-        K --> L["Winner Announced & Status Checked"]
-        L --> M["Winner Submits Prize Claim"]
-        M --> N["Claim Saved & Status Becomes Claimed"]
+    subgraph FrontendLayer["1. Frontend Presentation Layer (React 19 + Vite)"]
+        direction TB
+        F1["User & Admin UI Interfaces"]
+        F2["React Router Navigation"]
+        F3["AuthContext (JWT Session State)"]
+        F4["Protected Route Guards"]
+        F5["Bootstrap CSS & Framer Motion Animations"]
+        F1 --> F2 --> F3 --> F4 --> F5
     end
 
-    subgraph AdminSystemFlow["Admin & System Finalization Flow"]
-        A2["Admin Login"] --> B2["JWT Admin Authentication"]
-        B2 --> C2["Manage Giveaways"]
-        C2 --> D2["Finalize Expired Giveaway (API / Cron)"]
-        D2 --> E2["Random Winner Selection (Fisher-Yates)"]
-        E2 --> F2["Giveaway Status Becomes Archived"]
-        F2 --> G2["Winner Receives Pending Claim Status"]
-        G2 --> H2["Create Audit Log (GIVEAWAY_FINALIZED)"]
-        H2 --> I2["Display Winners on Winners Page"]
+    subgraph AuthSecurity["3. Authentication & Security Middleware"]
+        direction TB
+        S1["Register & Login Endpoints"]
+        S2["bcrypt Password Hashing"]
+        S3["JWT Token Issue (30d Expiry)"]
+        S4["Bearer Token Validation (authMiddleware)"]
+        S5["Role-Based Access Control (adminMiddleware)"]
+        S6["CORS & Rate Limiting"]
+        S1 --> S2 --> S3 --> S4 --> S5 --> S6
     end
+
+    subgraph BackendLayer["2. Backend Core Services & Express Controllers"]
+        direction TB
+        B1["Node.js & Express.js REST Engine"]
+        B2["Controllers (auth, giveaway, participation, winner, claim, admin)"]
+        B3["Services (giveawayService, cronRunner)"]
+        B4["Global Error Middleware & Custom Handlers"]
+        B1 --> B2 --> B3 --> B4
+    end
+
+    subgraph JoinValidation["4. Giveaway Join & Transaction Flow"]
+        direction TB
+        V1["Validate Giveaway ID & Active Status"]
+        V2["Check Start Date & Expiry Countdown"]
+        V3["Validate Idempotency-Key Header"]
+        V4["Check User Wallet Balance (VEs/SVEs/Tokens)"]
+        V5["Prevent Duplicate Entry (Compound Index)"]
+        V6["ACID Session Transaction: Deduct Balance & Save Participation"]
+        V1 --> V2 --> V3 --> V4 --> V5 --> V6
+    end
+
+    subgraph AdminFinalization["5. Admin Finalization & Winner Selection Flow"]
+        direction TB
+        A1["Verify Admin Role (User.role === 'admin')"]
+        A2["Check Giveaway Exists & Has Expired"]
+        A3["Check Already Finalized (Prevent Duplicate Finalize)"]
+        A4["Random Winner Selection (Fisher-Yates Shuffle)"]
+        A5["Update Giveaway Status to Archived"]
+        A6["Create Winner Records (pending_claim) & Audit Log"]
+        A1 --> A2 --> A3 --> A4 --> A5 --> A6
+    end
+
+    subgraph PrizeClaimFlow["7. Prize Claim Verification Flow"]
+        direction TB
+        C1["Verify Logged-in User Winner Record"]
+        C2["Validate Required Fields (Physical Address / Digital Email)"]
+        C3["Prevent Duplicate Claim (status === 'claimed')"]
+        C4["Save PrizeClaim Record & Update Winner Status"]
+        C1 --> C2 --> C3 --> C4
+    end
+
+    subgraph DatabaseLayer["6. Database Persistence Layer (MongoDB & Mongoose)"]
+        direction TB
+        DB1[("Users Collection (balances, role, avatar)")]
+        DB2[("Giveaways Collection (prizes, status)")]
+        DB3[("Participations Collection (unique index)")]
+        DB4[("Winners Collection (status: pending_claim/claimed)")]
+        DB5[("PrizeClaims Collection")]
+        DB6[("AuditLogs & FraudEvents Collections")]
+        DB7[("IdempotencyKeys Collection (24h TTL)")]
+    end
+
+    subgraph TestingSuite["8. Testing & Reliability Suite"]
+        direction TB
+        T1["Automated API Integration Tests"]
+        T2["End-to-End System Tests (testFullSystemE2E.js)"]
+        T3["Idempotency & Concurrency Tests (testIdempotency.js)"]
+        T4["Protected Route & Auth Error Responses"]
+        T1 --> T2 --> T3 --> T4
+    end
+
+    %% Layer Connections
+    FrontendLayer ==>|"HTTP REST Calls / Auth Bearer Token"| AuthSecurity
+    AuthSecurity ==>|"Authenticated Request Context"| BackendLayer
+    BackendLayer -->|"Join Request"| JoinValidation
+    BackendLayer -->|"Finalize Request"| AdminFinalization
+    BackendLayer -->|"Claim Request"| PrizeClaimFlow
+
+    JoinValidation ==>|"ACID Transaction Sessions"| DatabaseLayer
+    AdminFinalization ==>|"Winner & Audit Persistence"| DatabaseLayer
+    PrizeClaimFlow ==>|"Fulfillment Persistence"| DatabaseLayer
+    DatabaseLayer <===>|"Verification & State Assertion"| TestingSuite
 ```
 
 ## 🏆 Winner System & Prize Claim System
