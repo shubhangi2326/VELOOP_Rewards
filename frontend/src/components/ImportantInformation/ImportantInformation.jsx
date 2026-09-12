@@ -1,46 +1,31 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
-import styles from './ImportantInformation.module.css';
 
 const ImportantInformation = ({ info }) => {
   const [openIndex, setOpenIndex] = useState(null);
-
-  const toggleInfo = (index) => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
+  const toggle = (i) => setOpenIndex(openIndex === i ? null : i);
 
   if (!info || info.length === 0) return null;
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <AlertCircle size={20} className="me-2 text-warning" aria-hidden="true" />
-        <h3 className={styles.title}>Important Information</h3>
+    <div>
+      <div className="imp-info-header">
+        <AlertCircle size={20} style={{ color: 'var(--accent-gold)' }} />
+        <h3>Important Information</h3>
       </div>
-      <div className={styles.accordion}>
-        {info.map((item, index) => {
-          const isOpen = openIndex === index;
+      <div className="imp-accordion">
+        {info.map((item, i) => {
+          const isOpen = openIndex === i;
           return (
-            <div key={index} className={`${styles.accordionItem} ${isOpen ? styles.open : ''}`}>
-              <button
-                className={styles.accordionHeader}
-                onClick={() => toggleInfo(index)}
-                aria-expanded={isOpen}
-                aria-controls={`info-content-${index}`}
-              >
-                <span className={styles.itemTitle}>{item.title}</span>
-                <span className={styles.iconWrapper} aria-hidden="true">
-                  {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            <div key={i} className={`imp-accordion-item ${isOpen ? 'open' : ''}`}>
+              <button className="imp-accordion-btn" onClick={() => toggle(i)} aria-expanded={isOpen}>
+                <span>{item.title}</span>
+                <span className="imp-accordion-icon">
+                  {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </span>
               </button>
-              <div 
-                id={`info-content-${index}`} 
-                className={styles.accordionContent}
-                hidden={!isOpen}
-              >
-                <div className={styles.contentInner}>
-                  {item.content}
-                </div>
+              <div className="imp-accordion-content" hidden={!isOpen}>
+                <div className="imp-accordion-inner">{item.content}</div>
               </div>
             </div>
           );

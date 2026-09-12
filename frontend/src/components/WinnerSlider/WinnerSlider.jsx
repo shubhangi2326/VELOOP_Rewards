@@ -1,101 +1,79 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PartyPopper, AlertCircle } from 'lucide-react';
 import { api } from '../../services/api';
-import styles from './WinnerSlider.module.css';
 
 const WinnerSlider = () => {
-  const [messages, setMessages] = useState([]);
+  const [winners, setWinners] = useState([]);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-  const sliderRef = useRef(null);
 
   useEffect(() => {
     let ignore = false;
-    const fetchWinners = async () => {
-      setLoading(true);
-      setError(false);
+    const fetch = async () => {
+      setLoading(true); setError(false);
       try {
-        const winnersData = await api.getPreviousWinners();
+        const data = await api.getPreviousWinners();
         if (ignore) return;
-        
-        if (winnersData && winnersData.length > 0) {
-          // Find unique giveaway IDs
-          const uniqueGiveawayIds = [...new Set(winnersData.map(w => w.giveawayId))];
-          
-          // Fetch all related giveaways to resolve prize info
-          const giveaways = await Promise.all(
-            uniqueGiveawayIds.map(id => api.getGiveawayById(id).catch(() => null))
-          );
-          
+        if (data?.length > 0) {
+          const ids = [...new Set(data.map(w => w.giveawayId))];
+          const giveaways = await Promise.all(ids.map(id => api.getGiveawayById(id).catch(() => null)));
           if (ignore) return;
-          
-          const giveawayMap = {};
-          giveaways.forEach(g => {
-            if (g) giveawayMap[g.id] = g;
+          const map = {};
+          giveaways.forEach(g => { if (g) map[g.id] = g; });
+          const seen = new Set();
+          const formatted = [];
+          data.forEach(w => {
+            if (!seen.has(w._id)) {
+              seen.add(w._id);
+              const g = map[w.giveawayId];
+              let prize = g?.prizes?.find(p => p.id === w.prizeId);
+              if (!prize && g?.prizes?.length === 1) {
+                prize = g.prizes[0];
+              }
+              const prizeName = w.prizeName || prize?.name || 'a prize';
+              const prizeImage = w.prizeImage || prize?.image || null;
+              formatted.push({ id: w._id, maskedUserId: w.maskedUserId, prizeName, giveawayName: g?.title || 'Unknown Giveaway', prizeImage });
+            }
           });
-
-          // Format winner messages
-          const formattedMsgs = winnersData.map(w => {
-            const giveaway = giveawayMap[w.giveawayId];
-            const prize = giveaway?.prizes?.find(p => p.id === w.prizeId);
-            const prizeName = prize?.name || 'a prize';
-            return `🎉 User ${w.maskedUserId} won ${prizeName}!`;
-          });
-          
-          // Duplicate for continuous scroll effect
-          setMessages([...formattedMsgs, ...formattedMsgs]);
-        } else {
-          setMessages([]);
-        }
-      } catch (err) {
-        if (!ignore) {
-          console.error("Failed to fetch winners:", err);
-          setError(true);
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
+          setWinners([...formatted, ...formatted]);
+        } else setWinners([]);
+      } catch { if (!ignore) setError(true); }
+      finally { if (!ignore) setLoading(false); }
     };
-    
-    fetchWinners();
+    fetch();
     return () => { ignore = true; };
   }, []);
 
-  if (loading) return null; // Can render a mini skeleton here if needed, but null is fine to avoid UI jump
+  if (loading) return null;
 
-  if (error) {
-    return (
-      <div className={styles.sliderContainer}>
-        <div className="d-flex align-items-center justify-content-center w-100 text-danger small">
-          <AlertCircle size={14} className="me-2" /> Failed to load recent winners
-        </div>
-      </div>
-    );
-  }
+  if (error) return (
+    <div className="winner-slider-container" style={{ justifyContent: 'center', padding: '1rem' }}>
+      <AlertCircle size={16} style={{ color: '#ef4444', marginRight: '0.5rem' }} />
+      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Failed to load winners</span>
+    </div>
+  );
 
-  if (messages.length === 0) {
-    return (
-      <div className={styles.sliderContainer}>
-        <div className="d-flex align-items-center justify-content-center w-100 text-muted small fst-italic">
-          No winners have been announced yet.
-        </div>
-      </div>
-    );
-  }
+  if (winners.length === 0) return (
+    <div className="winner-slider-container" style={{ justifyContent: 'center', padding: '1rem' }}>
+      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No winners have been announced yet.</span>
+    </div>
+  );
 
   return (
-    <div className={styles.sliderContainer}>
-      <div className={styles.sliderLabel}>
-        <PartyPopper size={16} />
-        <span>Recent Winners</span>
+    <div className="winner-slider-container">
+      <div className="winner-slider-label">
+        <PartyPopper size={18} /><span>Recent Winners</span>
       </div>
-      <div className={styles.sliderTrackWrapper}>
-        <div className={styles.sliderTrack} ref={sliderRef}>
-          {messages.map((msg, idx) => (
-            <div key={idx} className={styles.sliderItem}>
-              {msg}
+      <div className="winner-slider-track-wrapper">
+        <div className="winner-slider-track">
+          {winners.map((w, idx) => (
+            <div key={`${w.id}-${idx}`} className="winner-card-tick">
+              {w.prizeImage && <img src={w.prizeImage} alt={w.prizeName} className="winner-tick-img" />}
+              <div>
+                <div className="winner-tick-user">{w.maskedUserId} won!</div>
+                <div className="winner-tick-prize">{w.prizeName}</div>
+                <div className="winner-tick-giveaway">in {w.giveawayName}</div>
+              </div>
             </div>
           ))}
         </div>

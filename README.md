@@ -21,6 +21,40 @@ Users can browse active, upcoming, and past giveaways. Each giveaway offers prem
 3. **Ended:** The entry period has closed. The backend finalizes winners, and the UI shifts to winner reveals.
 4. **Archived:** Historical giveaways whose winners have been successfully processed and moved to the "Previous Winners" history.
 
+## 🔀 System Workflow & Application Flow Diagram
+
+Below is the complete end-to-end application workflow diagram illustrating participant interactions and admin/system finalization:
+
+```mermaid
+flowchart TD
+    subgraph ParticipantFlow["Participant Flow"]
+        A["User Opens Website"] --> B["Register / Login"]
+        B --> C["JWT Authentication"]
+        C --> D["Browse Current Giveaways"]
+        D --> E["Open Giveaway Details"]
+        E --> F["Click Confirm & Join"]
+        F --> G["Send Request with Idempotency-Key"]
+        G --> H["Backend Validates & Checks VE Balance"]
+        H --> I["Atomic Entry Fee Deduction (ACID Session)"]
+        I --> J["Participation Saved in MongoDB"]
+        J --> K["User Checks Profile / My Giveaways"]
+        K --> L["Winner Announced & Status Checked"]
+        L --> M["Winner Submits Prize Claim"]
+        M --> N["Claim Saved & Status Becomes Claimed"]
+    end
+
+    subgraph AdminSystemFlow["Admin & System Finalization Flow"]
+        A2["Admin Login"] --> B2["JWT Admin Authentication"]
+        B2 --> C2["Manage Giveaways"]
+        C2 --> D2["Finalize Expired Giveaway (API / Cron)"]
+        D2 --> E2["Random Winner Selection (Fisher-Yates)"]
+        E2 --> F2["Giveaway Status Becomes Archived"]
+        F2 --> G2["Winner Receives Pending Claim Status"]
+        G2 --> H2["Create Audit Log (GIVEAWAY_FINALIZED)"]
+        H2 --> I2["Display Winners on Winners Page"]
+    end
+```
+
 ## 🏆 Winner System & Prize Claim System
 - **Winner Selection:** Processed securely on the backend. Only the exact configured number of winners per prize (e.g., 1 for an iPhone, 5 for AirPods) are selected.
 - **Prize Claim System:** When a user logs in and is detected as a winner, they are presented with a "Claim Prize" modal. 

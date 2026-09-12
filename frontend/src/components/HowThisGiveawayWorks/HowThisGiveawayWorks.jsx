@@ -1,37 +1,25 @@
 import React from 'react';
 import { Search, CheckSquare, Wallet, ShieldCheck, Clock, PartyPopper, Gift } from 'lucide-react';
-import styles from './HowThisGiveawayWorks.module.css';
 
-const IconMap = {
-  Search,
-  CheckSquare,
-  Wallet,
-  ShieldCheck,
-  Clock,
-  PartyPopper,
-  Gift
-};
+const IconMap = { Search, CheckSquare, Wallet, ShieldCheck, Clock, PartyPopper, Gift };
 
 const HowThisGiveawayWorks = ({ timeline }) => {
   if (!timeline || timeline.length === 0) return null;
-
   return (
-    <div className={styles.timelineContainer}>
-      <h3 className={styles.title}>How This Giveaway Works</h3>
-      <div className={styles.timeline}>
+    <div>
+      <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'white', marginBottom: '1.5rem' }}>
+        <ShieldCheck size={20} style={{ marginRight: '0.5rem', color: 'var(--primary-color)' }} />
+        How This Giveaway Works
+      </h3>
+      <div className="htgw-timeline">
         {timeline.map((item, idx) => {
           const Icon = IconMap[item.icon] || ShieldCheck;
           return (
-            <div key={idx} className={styles.timelineItem}>
-              <div className={styles.iconContainer}>
-                <div className={styles.iconWrapper}>
-                  <Icon size={20} className={styles.icon} aria-hidden="true" />
-                </div>
-                {idx < timeline.length - 1 && <div className={styles.line}></div>}
-              </div>
-              <div className={styles.content}>
-                <h4 className={styles.stepTitle}>{item.title}</h4>
-                <p className={styles.stepDesc}>{item.desc}</p>
+            <div key={idx} className="htgw-step">
+              <div className="htgw-step-num"><Icon size={14} /></div>
+              <div className="htgw-step-content" style={{ paddingLeft: '1.5rem' }}>
+                <p className="htgw-step-title">{item.title}</p>
+                <p className="htgw-step-desc">{item.desc}</p>
               </div>
             </div>
           );

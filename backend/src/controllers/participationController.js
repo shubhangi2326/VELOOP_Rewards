@@ -2,11 +2,62 @@ const mongoose = require('mongoose');
 const Giveaway = require('../models/Giveaway');
 const GiveawayParticipation = require('../models/GiveawayParticipation');
 const GiveawayEntryTransaction = require('../models/GiveawayEntryTransaction');
+const IdempotencyKey = require('../models/IdempotencyKey');
 
 // Note: For this mock, we assume the user balance is attached to req.user (e.g., from authMiddleware fetching it)
 // If not, in a real scenario we fetch it from the Wallet/User service.
 
 const joinGiveaway = async (req, res, next) => {
+  const idempotencyKey = req.headers['idempotency-key'];
+  if (!idempotencyKey) {
+    return res.status(400).json({ error: 'MISSING_IDEMPOTENCY_KEY', message: 'Idempotency key is required.' });
+  }
+  const userId = req.user.id;
+  const requestPath = req.originalUrl;
+
+  // Cross-user isolation: reject if this key was already issued by a different user
+  const keyOwnerRecord = await IdempotencyKey.findOne({ key: idempotencyKey });
+  if (keyOwnerRecord && keyOwnerRecord.userId.toString() !== userId.toString()) {
+    return res.status(403).json({
+      error: 'IDEMPOTENCY_KEY_OWNED_BY_ANOTHER_USER',
+      message: 'This idempotency key belongs to another user and cannot be reused.'
+    });
+  }
+
+  let idemRecord = await IdempotencyKey.findOne({ key: idempotencyKey, userId });
+  if (idemRecord) {
+    if (idemRecord.status === 'COMPLETED') {
+      return res.status(idemRecord.responseCode || 200).json(idemRecord.responseBody);
+    }
+    if (idemRecord.status === 'IN_PROGRESS') {
+      return res.status(409).json({ error: 'CONCURRENT_REQUEST', message: 'This request is currently being processed.' });
+    }
+    if (idemRecord.status === 'FAILED') {
+      const locked = await IdempotencyKey.findOneAndUpdate(
+        { _id: idemRecord._id, status: 'FAILED' },
+        { $set: { status: 'IN_PROGRESS', requestPath } },
+        { new: true }
+      );
+      if (!locked) {
+        return res.status(409).json({ error: 'CONCURRENT_REQUEST', message: 'This request is currently being processed.' });
+      }
+    }
+  } else {
+    try {
+      await IdempotencyKey.create({
+        key: idempotencyKey,
+        userId,
+        requestPath,
+        status: 'IN_PROGRESS'
+      });
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.status(409).json({ error: 'CONCURRENT_REQUEST', message: 'This request is currently being processed.' });
+      }
+      return next(err);
+    }
+  }
+
   const session = await mongoose.startSession();
   session.startTransaction();
   
@@ -15,7 +66,6 @@ const joinGiveaway = async (req, res, next) => {
   try {
     const { id } = req.params; // giveawayId
     const { prizeId } = req.body;
-    const userId = req.user.id;
     const deviceHash = req.body.deviceHash || 'unknown';
 
     // 1. Load Giveaway and verify status/time
@@ -119,17 +169,31 @@ const joinGiveaway = async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
-    res.json({
+    const responsePayload = {
       success: true,
       message: 'Successfully joined giveaway.',
       participationId: participation._id,
       newBalance
-    });
+    };
+
+    // Safely mark as COMPLETED outside the transaction
+    await IdempotencyKey.findOneAndUpdate(
+      { key: idempotencyKey, userId },
+      { $set: { status: 'COMPLETED', responseCode: 200, responseBody: responsePayload } }
+    ).catch(() => {}); // Ignore error, transaction is already committed
+
+    return res.json(responsePayload);
 
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
     
+    // Mark as FAILED so it can be retried safely
+    await IdempotencyKey.findOneAndUpdate(
+      { key: idempotencyKey, userId },
+      { $set: { status: 'FAILED' } }
+    ).catch(() => {}); // Ignore error during failure marking
+
     // Log specific failed flows before returning
     if (error.code === 11000) {
       await AuditLog.create({
@@ -155,7 +219,7 @@ const joinGiveaway = async (req, res, next) => {
       return res.status(error.status).json({ error: error.error, message: error.message });
     }
     
-    next(error);
+    return next(error);
   }
 };
 

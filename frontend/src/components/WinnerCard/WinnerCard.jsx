@@ -1,33 +1,35 @@
 import React from 'react';
 import { Trophy, Calendar } from 'lucide-react';
-import styles from './WinnerCard.module.css';
 
 const WinnerCard = ({ winner, prize }) => {
   const winnerDate = new Date(winner.createdAt).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
+    year: 'numeric', month: 'short', day: 'numeric'
   });
 
+  // Use inline prize details from enriched backend response (primary)
+  // Fall back to prize prop for any other usage context
+  const prizeName = winner.prizeName || prize?.name || null;
+  const prizeImage = winner.prizeImage || prize?.image || null;
+
   return (
-    <div className={styles.card}>
-      <div className={styles.imageWrapper}>
-        {prize?.image ? (
-          <img src={prize.image} alt={prize.name} className={styles.image} />
+    <div className="winner-card">
+      <div className="winner-card-img-wrap">
+        {prizeImage ? (
+          <img src={prizeImage} alt={prizeName || 'Prize'} className="winner-card-img" />
         ) : (
-          <div className={styles.imagePlaceholder}>
-            <Trophy size={48} className="text-muted" aria-hidden="true" />
+          <div className="winner-card-placeholder">
+            <Trophy size={48} />
           </div>
         )}
       </div>
-      <div className={styles.content}>
-        <div className={styles.winnerBadge}>
-          <Trophy size={14} className="me-1" aria-hidden="true" /> Winner
+      <div className="winner-card-body">
+        <div className="winner-badge">
+          <Trophy size={13} /> Winner
         </div>
-        <h3 className={styles.userId}>{winner.maskedUserId}</h3>
-        <p className={styles.prizeName}>Won: <strong>{prize?.name || 'Unknown Prize'}</strong></p>
-        <div className={styles.dateInfo}>
-          <Calendar size={14} className="me-1" aria-hidden="true" />
+        <h3 className="winner-user-id">{winner.maskedUserId}</h3>
+        <p className="winner-prize-name">Won: <strong>{prizeName || 'Unknown Prize'}</strong></p>
+        <div className="winner-date">
+          <Calendar size={14} />
           <span>{winnerDate}</span>
         </div>
       </div>
@@ -36,3 +38,4 @@ const WinnerCard = ({ winner, prize }) => {
 };
 
 export default WinnerCard;
+

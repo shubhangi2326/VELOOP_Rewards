@@ -31,8 +31,10 @@ export const api = {
   getGiveaways: () => fetchApi('/giveaways/current'),
   getGiveawayById: (id) => fetchApi(`/giveaways/${id}`),
   getPreviousGiveaways: () => fetchApi('/giveaways/previous'),
-  joinGiveaway: (giveawayId, prizeId) => fetchApi(`/giveaways/${giveawayId}/join`, {
+  getStats: () => fetchApi('/giveaways/stats'),
+  joinGiveaway: (giveawayId, prizeId, idempotencyKey) => fetchApi(`/giveaways/${giveawayId}/join`, {
     method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify({ prizeId })
   }),
   getMyStatus: (giveawayId) => fetchApi(`/giveaways/${giveawayId}/my-status`),

@@ -43,6 +43,9 @@ exports.register = async (req, res, next) => {
           id: user._id,
           name: user.name,
           email: user.email,
+          role: user.role || 'user',
+          avatar: user.avatar || null,
+          createdAt: user.createdAt,
           balances: user.balances
         }
       });
@@ -75,6 +78,9 @@ exports.login = async (req, res, next) => {
           id: user._id,
           name: user.name,
           email: user.email,
+          role: user.role || 'user',
+          avatar: user.avatar || null,
+          createdAt: user.createdAt,
           balances: user.balances
         }
       });
@@ -92,11 +98,23 @@ exports.getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (user) {
+      const GiveawayParticipation = require('../models/GiveawayParticipation');
+      const participations = await GiveawayParticipation.find({ userId: req.user.id }).lean();
+      const totalParticipations = participations.length;
+      const totalVesSpent = participations.reduce((acc, p) => acc + (p.entryFeePaid || 0), 0);
+
       res.json({
         id: user._id,
         name: user.name,
         email: user.email,
-        balances: user.balances
+        role: user.role || 'user',
+        avatar: user.avatar || null,
+        createdAt: user.createdAt,
+        balances: user.balances,
+        stats: {
+          totalParticipations,
+          totalVesSpent
+        }
       });
     } else {
       const error = new Error('User not found');

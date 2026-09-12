@@ -12,6 +12,7 @@ const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Security and utility middlewares
 app.use(helmet());

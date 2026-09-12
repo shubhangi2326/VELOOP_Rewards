@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Trophy, AlertCircle } from 'lucide-react';
 import { api } from '../../services/api';
 import ThemedLoader from '../../components/ThemedLoader/ThemedLoader';
 import WinnerCard from '../../components/WinnerCard/WinnerCard';
-import styles from './GiveawayWinners.module.css';
 
 const GiveawayWinners = () => {
   const { giveawayId } = useParams();
@@ -50,34 +49,34 @@ const GiveawayWinners = () => {
   }
 
   return (
-    <div className={styles.pageContainer}>
-      <div className={styles.topNav}>
+    <div className="gw-winners-page">
+      <div className="gw-winners-topnav">
         <div className="container">
-          <Link to="/giveaways" className={styles.backLink}>
+          <Link to="/giveaways" className="gw-winners-back">
             <ArrowLeft size={18} aria-hidden="true" /> Back to Giveaways
           </Link>
         </div>
       </div>
 
       <div className="container py-5">
-        <div className={styles.header}>
-          <div className={styles.iconWrapper}>
-            <Trophy size={32} className="text-warning" aria-hidden="true" />
+        <div className="gw-winners-header">
+          <div className="gw-winners-icon">
+            <Trophy size={32} aria-hidden="true" />
           </div>
           <h1 className="mb-2">Giveaway Winners</h1>
           <p className="text-muted">
             {giveaway ? `Showing results for: ${giveaway.title || 'Giveaway'}` : 'Giveaway Results'}
           </p>
           {giveaway && (
-            <div className={styles.statusBadge}>
-              <span className={styles.statusDot}></span>
+            <div className="gw-winners-status-badge">
+              <span className="gw-status-dot"></span>
               {giveaway.status === 'ended' ? 'ENDED' : giveaway.status.toUpperCase()}
             </div>
           )}
         </div>
 
         {error ? (
-          <div className={styles.errorState}>
+          <div className="gw-winners-error">
             <AlertCircle size={48} className="text-danger mb-3" aria-hidden="true" />
             <h3 className="mb-3">Oops! Something went wrong</h3>
             <button className="btn btn-primary" onClick={() => setRetryCount(c => c + 1)}>
@@ -85,7 +84,7 @@ const GiveawayWinners = () => {
             </button>
           </div>
         ) : winners.length === 0 ? (
-          <div className={styles.emptyState}>
+          <div className="gw-winners-empty">
             <Trophy size={64} className="text-muted mb-3 opacity-50" aria-hidden="true" />
             <h3>No Winners Yet</h3>
             <p className="text-muted mt-2">
@@ -98,8 +97,11 @@ const GiveawayWinners = () => {
         ) : (
           <div className="row g-4">
             {winners.map((winner) => {
-              // Resolve prize from the fetched giveaway data
-              const prize = giveaway?.prizes?.find(p => p.id === winner.prizeId);
+              // Resolve prize from the fetched giveaway data (fall back to first prize ONLY if giveaway has 1 prize)
+              let prize = giveaway?.prizes?.find(p => p.id === winner.prizeId);
+              if (!prize && giveaway?.prizes?.length === 1) {
+                prize = giveaway.prizes[0];
+              }
               
               return (
                 <div key={winner._id} className="col-12 col-md-6 col-lg-4">

@@ -1,68 +1,75 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Users, Trophy } from 'lucide-react';
+import { ArrowRight, Users, Trophy, Sparkles, Timer } from 'lucide-react';
+import { motion } from 'framer-motion';
 import Countdown from '../Countdown/Countdown';
-import styles from './PrizeCard.module.css';
+
+const badgeClass = (pos) => {
+  if (pos === 1) return 'prize-card-position-badge badge-grand';
+  if (pos === 2) return 'prize-card-position-badge badge-second';
+  if (pos === 3) return 'prize-card-position-badge badge-third';
+  return 'prize-card-position-badge badge-lucky';
+};
+
+const badgeLabel = (pos) => {
+  if (pos === 1) return 'Grand Prize';
+  if (pos === 2) return '2nd Prize';
+  if (pos === 3) return '3rd Prize';
+  return 'Lucky Draw';
+};
 
 const PrizeCard = ({ prize, giveawayId, participantsCount, endDate, status }) => {
+  const isActive = status === 'active';
+  const to = isActive
+    ? `/giveaways/${giveawayId}/prize/${prize.id}`
+    : `/giveaways/${giveawayId}/winners`;
+
   return (
-    <div className={styles.card}>
-      <div className={styles.positionBadge}>
-        <Trophy size={14} className={styles.trophyIcon} />
-        {prize.position === 1 ? '1st Prize' : prize.position === 2 ? '2nd Prize' : prize.position === 3 ? '3rd Prize' : 'Lucky Draw'}
+    <motion.div className="prize-card" whileHover={{ y: -8 }} transition={{ duration: 0.35 }}>
+      <div className={badgeClass(prize.position)}>
+        {prize.position === 1 ? <Sparkles size={13} /> : <Trophy size={13} />}
+        {badgeLabel(prize.position)}
       </div>
-      
-      <div className={styles.imageWrapper}>
-        {prize.image ? (
-          <img src={prize.image} alt={prize.name} className={styles.image} />
-        ) : (
-          <div className={`${styles.image} d-flex align-items-center justify-content-center bg-dark bg-opacity-50`}>
-            <Trophy size={48} className="text-muted opacity-50" />
-          </div>
-        )}
-        {status === 'active' && endDate && (
-          <div className={styles.countdownOverlay}>
+
+      <div className="prize-card-img-wrapper">
+        {prize.image
+          ? <img src={prize.image} alt={prize.name} className="prize-card-img" />
+          : <div className="prize-card-img-placeholder"><Trophy size={52} /></div>
+        }
+        {isActive && endDate && (
+          <div className="prize-card-countdown">
+            <Timer size={13} />
             <Countdown targetDate={endDate} />
           </div>
         )}
       </div>
-      
-      <div className={styles.content}>
-        <h3 className={styles.title}>{prize.name}</h3>
-        <p className={styles.description}>{prize.description}</p>
-        
-        <div className={styles.statsRow}>
-          <div className={styles.stat}>
-            <Users size={14} />
-            <span>{participantsCount}+ Participants</span>
+
+      <div className="prize-card-body">
+        <h3 className="prize-card-title">{prize.name}</h3>
+        <p className="prize-card-desc">{prize.description}</p>
+
+        <div className="prize-card-meta">
+          <div className="prize-card-meta-item" style={{ color: 'var(--primary-color)' }}>
+            <Users size={14} /><span style={{ color: 'var(--text-subtle)' }}>{participantsCount}+ Participants</span>
           </div>
-          <div className={styles.stat}>
-            <Trophy size={14} />
-            <span>{prize.winnerCount} {prize.winnerCount > 1 ? 'Winners' : 'Winner'}</span>
+          <div className="prize-card-meta-item" style={{ color: 'var(--accent-gold)' }}>
+            <Trophy size={14} /><span style={{ color: 'var(--text-subtle)' }}>{prize.winnerCount} {prize.winnerCount > 1 ? 'Winners' : 'Winner'}</span>
           </div>
         </div>
-        
-        <div className={styles.footer}>
-          <div className={styles.entryRequirement}>
-            <span className={styles.reqLabel}>Entry Fee</span>
-            <span className={styles.reqValue}>{prize.entryFee} {prize.entryCurrency}</span>
+
+        <div className="prize-card-footer">
+          <div>
+            <div className="prize-card-fee-label">Entry Fee</div>
+            <div className="prize-card-fee-value">
+              {prize.entryFee}<span className="prize-card-fee-currency">{prize.entryCurrency}</span>
+            </div>
           </div>
-          
-          <Link 
-            to={status === 'ended' ? `/giveaways/${giveawayId}/winners` : `/giveaways/${giveawayId}/prize/${prize.id}`} 
-            className={styles.joinBtn}
-          >
-            {status === 'active' ? (
-              <>Join Now <ArrowRight size={16} /></>
-            ) : status === 'ended' ? (
-              'View Winners'
-            ) : (
-              'View Details'
-            )}
+          <Link to={to} className={`prize-card-btn ${isActive ? 'prize-card-btn-join' : 'prize-card-btn-view'}`}>
+            {isActive ? (<>Join Now <ArrowRight size={15} /></>) : status === 'ended' ? 'View Winners' : 'View Details'}
           </Link>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
