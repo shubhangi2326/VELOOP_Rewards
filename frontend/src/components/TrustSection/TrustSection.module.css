@@ -1,0 +1,69 @@
+.section {
+  padding: 5rem 0;
+  background-color: var(--bg-dark);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.title {
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--text-muted);
+}
+
+.trustCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 1.5rem;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.trustCard:hover {
+  transform: translateY(-5px);
+  border-color: var(--accent-gold);
+}
+
+.iconWrapper {
+  width: 60px;
+  height: 60px;
+  background: rgba(234, 179, 8, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  transition: background 0.3s ease;
+}
+
+.trustCard:hover .iconWrapper {
+  background: var(--accent-gold);
+}
+
+.icon {
+  color: var(--accent-gold);
+  transition: color 0.3s ease;
+}
+
+.trustCard:hover .icon {
+  color: var(--bg-dark);
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 1rem;
+}
+
+.cardDesc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
